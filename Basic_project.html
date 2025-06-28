@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>QuickNotes</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 p-4">
+  <!-- Title -->
+  <h1 class="text-4xl font-bold text-center text-indigo-700 mb-6">QuickNotes</h1>
+
+  <!-- Controls -->
+  <div class="flex flex-col md:flex-row gap-4 justify-between items-center mb-6">
+    <button onclick="toggleForm()" class="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700">
+      Add Note
+    </button>
+    <input id="searchInput" oninput="filterNotes()" type="text" placeholder="Search notes..."
+           class="w-full md:w-1/3 p-2 border rounded"/>
+    <select id="sortSelect" onchange="renderNotes()" class="w-full md:w-1/4 p-2 border rounded">
+      <option value="newest">Sort: Newest</option>
+      <option value="oldest">Sort: Oldest</option>
+      <option value="az">Sort: A-Z</option>
+      <option value="za">Sort: Z-A</option>
+    </select>
+  </div>
+
+  <!-- Add Note Form -->
+  <div id="noteForm" class="hidden bg-white p-4 rounded shadow mb-6">
+    <input id="noteTitle" type="text" placeholder="Title" class="w-full p-2 border rounded mb-2">
+    <textarea id="noteContent" placeholder="Content" class="w-full p-2 border rounded mb-2 h-24"></textarea>
+    <input id="noteColor" type="color" value="#ffffff" class="mb-2">
+    <button onclick="saveNote()" class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">Save</button>
+  </div>
+
+  <!-- Notes Container -->
+  <div id="notesContainer" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+    <!-- Notes will be rendered here -->
+  </div>
+
+  <script>
+    let notes = JSON.parse(localStorage.getItem('notes')) || [];
+
+    function toggleForm() {
+      document.getElementById('noteForm').classList.toggle('hidden');
+    }
+
+    function saveNote() {
+      const title = document.getElementById('noteTitle').value.trim();
+      const content = document.getElementById('noteContent').value.trim();
+      const color = document.getElementById('noteColor').value;
+      if (!title || !content) return alert('Please enter both title and content.');
+      notes.push({ title, content, color, created: Date.now() });
+      localStorage.setItem('notes', JSON.stringify(notes));
+      document.getElementById('noteTitle').value = '';
+      document.getElementById('noteContent').value = '';
+      renderNotes();
+      toggleForm();
+    }
+
+    function deleteNote(index) {
+      if (!confirm('Delete this note?')) return;
+      notes.splice(index, 1);
+      localStorage.setItem('notes', JSON.stringify(notes));
+      renderNotes();
+    }
+
+    function filterNotes() {
+      renderNotes(document.getElementById('searchInput').value);
+    }
+
+    function renderNotes(filter = '') {
+      const container = document.getElementById('notesContainer');
+      container.innerHTML = '';
+      let sortedNotes = [...notes];
+      const sort = document.getElementById('sortSelect').value;
+
+      if (sort === 'newest') sortedNotes.sort((a, b) => b.created - a.created);
+      else if (sort === 'oldest') sortedNotes.sort((a, b) => a.created - b.created);
+      else if (sort === 'az') sortedNotes.sort((a, b) => a.title.localeCompare(b.title));
+      else if (sort === 'za') sortedNotes.sort((a, b) => b.title.localeCompare(a.title));
+
+      const filtered = sortedNotes.filter(n =>
+        n.title.toLowerCase().includes(filter.toLowerCase()) ||
+        n.content.toLowerCase().includes(filter.toLowerCase())
+      );
+
+      filtered.forEach((note, index) => {
+        const card = document.createElement('div');
+        card.className = 'bg-white p-4 rounded shadow relative';
+        card.style.backgroundColor = note.color || '#ffffff';
+        card.innerHTML = `
+          <h2 class="text-xl font-bold mb-2">${note.title}</h2>
+          <p class="whitespace-pre-wrap text-gray-800">${note.content}</p>
+          <button onclick="deleteNote(${index})" class="absolute top-2 right-2 text-red-600 hover:text-red-800">🗑️</button>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    // Initial load
+    renderNotes();
+  </script>
+</body>
+</html>
